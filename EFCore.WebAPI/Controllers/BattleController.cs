@@ -15,20 +15,21 @@ namespace EFCore.WebAPI.Controllers
     [ApiController]
     public class BattleController : ControllerBase
     {
-        public HeroContext _context { get; }
+        private readonly IEFCoreRepository _repo;
 
-        public BattleController(HeroContext context)
+        public BattleController(IEFCoreRepository repo)
         {
-            _context = context;
+            _repo = repo;
         }
 
         // GET: api/<BattleController>
         [HttpGet]
-        public ActionResult Get()
+        public async Task<IActionResult> Get()
         {
             try
             {
-                return Ok(new Battle());
+                var battles = await _repo.GetAllBattles();
+                return Ok(battles);
             }
             catch (Exception ex)
             {
@@ -38,23 +39,40 @@ namespace EFCore.WebAPI.Controllers
 
         // GET api/<BattleController>/5
         [HttpGet("{id}", Name = "GetBattle")]
-        public ActionResult Get(int id)
+        public async Task<IActionResult> Get(int id)
         {
-            return Ok(id);
+            try
+            {
+                var battle = await _repo.GetBattleById(id, true);
+                if (battle != null)
+                {
+                    return Ok(battle);
+                }
+                return BadRequest("Not found!");
+                
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Erro: {ex}");
+            }
         }
 
         // CRUD INSERT
 
         // POST api/<BattleController>
         [HttpPost]
-        public ActionResult Post(Battle model)
+        public async Task<IActionResult> Post(Battle model)
         {
             try
             {
-                _context.Add(model);
-                _context.SaveChanges();
+                _repo.Add(model);
 
-                return Ok("Success!");
+                if (await _repo.SaveChangeAsync())
+                {
+                    return Ok("Success!");
+                } 
+                return BadRequest("Not saved!");
+
             }
             catch (Exception ex)
             {
@@ -66,19 +84,21 @@ namespace EFCore.WebAPI.Controllers
 
         // PUT api/<BattleController>/5
         [HttpPut("{id}")]
-        public ActionResult Put(int id, Battle model)
+        public async Task<IActionResult> Put(int id, Battle model)
         {
             try
             {
-                if (_context.Battles.AsNoTracking()
-                   .FirstOrDefault(h => h.Id == id) != null)
+                var battle = await _repo.GetBattleById(id);
+                if (battle != null)
                 {
-                    _context.Update(model);
-                    _context.SaveChanges();
-
-                    return Ok("Success!");
+                    _repo.Update(model);
+                    if (await _repo.SaveChangeAsync())
+                    {
+                        return Ok("Success!");
+                    }
+                    return BadRequest("Not saved!");
                 }
-                return Ok("Not found!");
+                return BadRequest("Not updated!");
             }
             catch (Exception ex)
             {
@@ -86,10 +106,30 @@ namespace EFCore.WebAPI.Controllers
             }
         }
 
+        // CRUD DELETE
+
         // DELETE api/<BattleController>/5
         [HttpDelete("{id}")]
-        public void Delete(int id)
+        public async Task<IActionResult> Delete(int id)
         {
+            try
+            {
+                var battle = await _repo.GetBattleById(id);
+                if (battle != null)
+                {
+                    _repo.Delete(battle);
+                    if (await _repo.SaveChangeAsync())
+                    {
+                        return Ok("Success!");
+                    }
+                    return BadRequest("Not saved!");
+                }
+                return BadRequest("Not deleted!");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Erro: {ex}");
+            }
         }
     }
 }

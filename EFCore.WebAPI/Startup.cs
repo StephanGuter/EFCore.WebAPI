@@ -21,13 +21,14 @@ namespace EFCore.WebAPI
         [System.Obsolete]
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<HeroContext>(options => 
-            {
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
-            });
+            services.AddDbContext<HeroContext>(opt => opt.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+
+            services.AddScoped<IEFCoreRepository, EFCoreRepository>();
+
+            services.AddControllers()
+                    .AddNewtonsoftJson(opt => opt.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
 
             services.AddMvc(options => options.EnableEndpointRouting = false);
-            //services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Latest);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
